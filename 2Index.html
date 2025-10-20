@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="ar">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>نموذج توعوي — مثال على صفحة تسجيل</title>
+<style>
+  :root { --bg:#f0f2f5; --card:#fff; --accent:#1877f2; --danger:#c62828; }
+  body{font-family:Tahoma, Arial, sans-serif;background:var(--bg);margin:0;padding:20px;direction:rtl}
+  .banner{background:var(--danger);color:#fff;padding:12px;border-radius:8px;margin-bottom:16px;font-weight:700;text-align:center;}
+  .container{max-width:380px;margin:0 auto;background:var(--card);padding:22px;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,0.08)}
+  h1{margin:0 0 10px;font-size:20px;color:#111}
+  p.hint{margin:0 0 18px;color:#444;font-size:13px}
+  label{display:block;font-size:13px;color:#333;margin-top:10px}
+  input[type="text"],input[type="password"]{width:100%;padding:10px;margin-top:6px;border:1px solid #d0d3d8;border-radius:6px;font-size:14px}
+  button{width:100%;margin-top:14px;padding:10px;border:0;border-radius:6px;background:var(--accent);color:#fff;font-weight:700;cursor:pointer}
+  .foot{margin-top:12px;font-size:12px;color:#666;text-align:center}
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,0.5);display:none;align-items:center;justify-content:center;padding:20px}
+  .modal .box{background:#fff;padding:18px;border-radius:8px;max-width:600px;width:100%;text-align:right}
+  .modal h2{margin:0 0 8px}
+  .steps{margin-top:8px}
+  .steps li{margin-bottom:6px}
+  code{background:#f4f6f8;padding:4px 6px;border-radius:4px;font-family:monospace}
+  .sim{background:#fff3cd;border:1px solid #ffeeba;padding:10px;border-radius:6px;color:#856404;margin-top:10px}
+</style>
+</head>
+<body>
+
+<div class="banner">نموذج توعوي — صفحة تعليمية بحتة. لا تدخل معلوماتك الحقيقية.</div>
+
+<div class="container" role="main" aria-labelledby="title">
+  <h1 id="title">تسجيل دخول — نموذج توعوي</h1>
+  <p class="hint">هذه صفحة تعليمية توضح كيفية عمل صفحات التصيّد. أي بيانات تُدخل لن تُرسل إلى الإنترنت.</p>
+
+  <form id="demoForm" autocomplete="off">
+    <label for="user">البريد الإلكتروني أو رقم الهاتف</label>
+    <input id="user" name="user" type="text" placeholder="مثال: demo@example.com" required>
+
+    <label for="pass">كلمة المرور</label>
+    <input id="pass" name="pass" type="password" placeholder="أدخل كلمة تجريبية" required>
+
+    <button type="submit">تسجيل الدخول</button>
+  </form>
+
+  <div class="foot">ملاحظة: استخدم معلومات تجريبية فقط أثناء تصوير العرض.</div>
+</div>
+
+<!-- Modal توضيحي -->
+<div id="modal" class="modal" role="dialog" aria-modal="true">
+  <div class="box">
+    <h2>تحذير — هذا عرض توعوي</h2>
+    <p>البيانات التي أدخلتها هي <strong>نموذجية</strong> ولم تُرسل لأي جهة خارجية. الهدف: توضيح كيف يستغل المحتالون هذه الصفحات لسرقة بياناتك.</p>
+
+    <div class="sim" id="simResult">
+      <!-- النتيجة التوضيحية ستعرض هنا -->
+    </div>
+
+    <h3 style="margin-top:12px">نقاط توعية للمشاهدين</h3>
+    <ul class="steps">
+      <li>✔ تحقق دائماً من عنوان الصفحة (URL) قبل إدخال بياناتك.</li>
+      <li>✔ فعّل المصادقة الثنائية (2FA) لحماية حسابك.</li>
+      <li>✔ لا تضغط روابط في رسائل مجهولة — افتح الموقع يدوياً عبر متصفحك.</li>
+      <li>✔ راجع البريد الإلكتروني للمرسل ووجود أخطاء إملائية وعناوين غريبة.</li>
+    </ul>
+
+    <p style="text-align:left;margin-top:12px"><button id="closeBtn">أغلق</button></p>
+  </div>
+</div>
+
+<script>
+  const form = document.getElementById('demoForm');
+  const modal = document.getElementById('modal');
+  const simResult = document.getElementById('simResult');
+  const closeBtn = document.getElementById('closeBtn');
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+
+    // اقرأ القيم (لأغراض العرض فقط) — لن يتم إرسالها لأي خادم
+    const user = document.getElementById('user').value.trim();
+    const pass = document.getElementById('pass').value;
+
+    // أنشئ نصًّا توضيحيًا (نخفي جزء من كلمة السر للسلامة)
+    const passMasked = pass.length ? pass.replace(/./g, '*') : '(فارغ)';
+    const safeDisplay = `
+      <strong>ملاحظة توضيحية:</strong>
+      <ul>
+        <li>القيمة المدخلة للحقل "البريد/الهاتف": <code>${escapeHtml(user)}</code></li>
+        <li>قيمة كلمة المرور (مموّهة): <code>${escapeHtml(passMasked)}</code></li>
+        <li style="margin-top:8px;color:#9a6b00">في سيناريو حقيقي، قد يقوم المهاجم بإرسال هذه البيانات إلى خادم خارجي أو قناة تواصل.</li>
+      </ul>
+      <p style="margin-top:8px"><strong>الإجراء المقترح:</strong> أظهر للمشاهدين كيف يمكنهم التبليغ وطلب إعادة ضبط كلمة المرور وتمكين 2FA.</p>
+    `;
+    simResult.innerHTML = safeDisplay;
+
+    // عرض النافذة التوضيحية
+    modal.style.display = 'flex';
+
+    // لا نحفظ ولا نرسل القيم — فقط للاستخدام البصري في العرض التوضيحي
+    console.log('[توَضيح] القيم التي أدخلت (للسجل المحلي فقط):', { user: user, pass_masked: passMasked });
+  });
+
+  closeBtn.addEventListener('click', () => {
+    modal.style.display = 'none';
+  });
+
+  // دالة بسيطة لتأمين عرض النص داخل HTML
+  function escapeHtml(text) {
+    if (!text) return '';
+    return text.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
+  }
+</script>
+
+</body>
+</html>
